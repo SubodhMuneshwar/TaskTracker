@@ -1,5 +1,6 @@
-﻿using System.Collections.Concurrent;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using TaskTrackerApi.Data;
 using TaskTrackerApi.Models;
 
 namespace TaskTrackerApi.Controllers;
@@ -8,128 +9,87 @@ namespace TaskTrackerApi.Controllers;
 [Route("api/[controller]")]
 public class TasksController : ControllerBase
 {
-    private static readonly ConcurrentDictionary<int, TaskItem> Tasks = new();
-    private static int _nextId = 1;
-    private static readonly object _lock = new();
+    private readonly AppDbContext _context;
 
-    static TasksController()
+    public TasksController(AppDbContext context)
     {
-        SeedInitialTasks();
-    }
-
-    private static void SeedInitialTasks()
-    {
-        var initialList = new List<TaskItem>
-        {
-            new()
-            {
-                Id = _nextId++,
-                Title = "Set up .NET Framework 4.7 Web API",
-                Description = "Build backend endpoints with Web API 2 controllers and CORS",
-                Status = "Completed",
-                Priority = "High",
-                CreatedAt = DateTime.UtcNow.AddHours(-3)
-            },
-            new()
-            {
-                Id = _nextId++,
-                Title = "Build React + Redux Frontend",
-                Description = "Connect Redux Toolkit store, async thunks, and UI dashboard",
-                Status = "Completed",
-                Priority = "High",
-                CreatedAt = DateTime.UtcNow.AddHours(-2)
-            },
-            new()
-            {
-                Id = _nextId++,
-                Title = "Migrate Backend to .NET 10",
-                Description = "Modernize project file, Kestrel server, and ASP.NET Core controllers",
-                Status = "Completed",
-                Priority = "High",
-                CreatedAt = DateTime.UtcNow.AddHours(-1)
-            },
-            new()
-            {
-                Id = _nextId++,
-                Title = "Containerize and Deploy on OpenShift",
-                Description = "Create multi-stage Dockerfile, Pods, Services, and OpenShift Routes",
-                Status = "Completed",
-                Priority = "High",
-                CreatedAt = DateTime.UtcNow
-            }
-        };
-
-        foreach (var task in initialList)
-        {
-            Tasks[task.Id] = task;
-        }
+        _context = context;
     }
 
     // GET: api/tasks
     [HttpGet]
-    public ActionResult<IEnumerable<TaskItem>> GetAll()
+    public async Task<ActionResult<IEnumerable<TaskItem>>> GetAll()
     {
-        var allTasks = Tasks.Values.OrderBy(t => t.Id).ToList();
+        var allTasks = await _context.Tasks
+            .OrderBy(t => t.Id)
+            .ToListAsync();
         return Ok(allTasks);
     }
 
     // GET: api/tasks/1
     [HttpGet("{id:int}")]
-    public ActionResult<TaskItem> GetById(int id)
+    public async Task<ActionResult<TaskItem>> GetById(int id)
     {
-        if (Tasks.TryGetValue(id, out var task))
+        var task = await _context.Tasks.FindAsync(id);
+        if (task == null)
         {
-            return Ok(task);
+            return NotFound();
         }
-        return NotFound();
+        return Ok(task);
     }
 
     // POST: api/tasks
     [HttpPost]
-    public ActionResult<TaskItem> Create([FromBody] TaskItem newTask)
+    public async Task<ActionResult<TaskItem>> Create([FromBody] TaskItem newTask)
     {
         if (newTask == null || string.IsNullOrWhiteSpace(newTask.Title))
         {
             return BadRequest("Task title is required.");
         }
 
-        lock (_lock)
-        {
-            newTask.Id = _nextId++;
-        }
         newTask.CreatedAt = DateTime.UtcNow;
+        _context.Tasks.Add(newTask);
+        await _context.SaveChangesAsync();
 
-        Tasks[newTask.Id] = newTask;
         return CreatedAtAction(nameof(GetById), new { id = newTask.Id }, newTask);
     }
 
     // PUT: api/tasks/1
     [HttpPut("{id:int}")]
-    public ActionResult<TaskItem> Update(int id, [FromBody] TaskItem updatedTask)
+    public async Task<ActionResult<TaskItem>> Update(int id, [FromBody] TaskItem updatedTask)
     {
         if (updatedTask == null || string.IsNullOrWhiteSpace(updatedTask.Title))
         {
             return BadRequest("Task data is invalid.");
         }
 
-        if (!Tasks.ContainsKey(id))
+        var existing = await _context.Tasks.FindAsync(id);
+        if (existing == null)
         {
             return NotFound();
         }
 
-        updatedTask.Id = id;
-        Tasks[id] = updatedTask;
-        return Ok(updatedTask);
+        existing.Title = updatedTask.Title;
+        existing.Description = updatedTask.Description;
+        existing.Status = updatedTask.Status;
+        existing.Priority = updatedTask.Priority;
+
+        await _context.SaveChangesAsync();
+        return Ok(existing);
     }
 
     // DELETE: api/tasks/1
     [HttpDelete("{id:int}")]
-    public ActionResult<TaskItem> Delete(int id)
+    public async Task<ActionResult<TaskItem>> Delete(int id)
     {
-        if (Tasks.TryRemove(id, out var removedTask))
+        var task = await _context.Tasks.FindAsync(id);
+        if (task == null)
         {
-            return Ok(removedTask);
+            return NotFound();
         }
-        return NotFound();
+
+        _context.Tasks.Remove(task);
+        await _context.SaveChangesAsync();
+        return Ok(task);
     }
 }
