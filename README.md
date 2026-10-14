@@ -1,9 +1,11 @@
-﻿# TaskTracker: Enterprise Modernization & Full-Stack Architecture
+﻿# TaskTracker: Enterprise Modernization, SQL Server & Cloud Architecture
 
-A hands-on, enterprise-grade full-stack project demonstrating the real-world modernization of a legacy .NET backend and integration with a modern React state-managed frontend, built for cloud-native deployment on Red Hat OpenShift.
+A hands-on, enterprise-grade full-stack project demonstrating the complete lifecycle of modernizing a legacy .NET backend, integrating a real Microsoft SQL Server database with Entity Framework Core, connecting a modern React Redux frontend, and preparing for cloud-native deployment on Red Hat OpenShift.
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/SubodhMuneshwar/TaskTracker)
 [![.NET Version](https://img.shields.io/badge/.NET-10.0-purple?logo=dotnet)](https://dotnet.microsoft.com/)
+[![Database](https://img.shields.io/badge/Database-Microsoft_SQL_Server-red?logo=microsoftsqlserver)](https://www.microsoft.com/en-us/sql-server/)
+[![ORM](https://img.shields.io/badge/ORM-Entity_Framework_Core_10-512bd4?logo=dotnet)](https://learn.microsoft.com/en-us/ef/core/)
 [![React Version](https://img.shields.io/badge/React-18-61dafb?logo=react)](https://react.dev/)
 [![Redux Toolkit](https://img.shields.io/badge/Redux-Toolkit-764abc?logo=redux)](https://redux-toolkit.js.org/)
 [![Target Platform](https://img.shields.io/badge/Cloud-Red_Hat_OpenShift_Ready-red?logo=redhatopenshift)](https://www.redhat.com/en/technologies/cloud-computing/openshift)
@@ -12,13 +14,14 @@ A hands-on, enterprise-grade full-stack project demonstrating the real-world mod
 
 ## 1. Executive Summary & Purpose
 
-In large-scale enterprise environments, engineering teams frequently encounter legacy web services built on classic Windows-bound frameworks. Migrating these systems to modern, container-ready runtimes while preserving seamless integration with modern single-page applications (SPAs) is a critical core competency.
+In large-scale enterprise environments, engineering teams frequently modernize existing on-premise Windows applications into resilient, cloud-native services.
 
 This repository documents the complete end-to-end modernization lifecycle of **TaskTracker**:
-1. **Initial State**: A classic RESTful API built on **.NET Framework 4.7.2** utilizing OWIN self-hosting and ASP.NET Web API 2.
-2. **Frontend Layer**: A responsive SPA built with **React 18**, **Vite**, and **Redux Toolkit** for centralized state management and asynchronous data flow.
-3. **Modernization Phase**: An architectural migration to **.NET 10**, transitioning to the high-performance, cross-platform **Kestrel** web server, modern `Program.cs` minimal hosting, and ASP.NET Core controllers.
-4. **Cloud-Native Target**: Preparation and architecture alignment for containerization and deployment onto **Red Hat OpenShift**.
+1. **Initial State (Legacy)**: A RESTful API built on **.NET Framework 4.7.2** using OWIN self-hosting and ASP.NET Web API 2.
+2. **Frontend Layer**: A responsive Single Page Application built with **React 18**, **Vite**, and **Redux Toolkit** for central state management and asynchronous data flow.
+3. **Modernization Phase**: Architectural migration to cross-platform **.NET 10**, transitioning to the high-throughput **Kestrel** web server, modern `Program.cs` minimal hosting, and ASP.NET Core controllers.
+4. **Database Persistence**: Integration of **Microsoft SQL Server** with **Entity Framework Core 10 (EF Core)**, replacing in-memory state with a persistent relational database and automated schema creation.
+5. **Cloud-Native Target**: Containerization using a multi-stage **Dockerfile** and declarative manifests (**Deployment**, **Service**, **Route**) for **Red Hat OpenShift**.
 
 ---
 
@@ -47,7 +50,17 @@ This repository documents the complete end-to-end modernization lifecycle of **T
 |   - .NET 10.0 (net10.0)                                     |
 |   - Kestrel Cross-Platform High-Throughput Server           |
 |   - ControllerBase & [ApiController] (ASP.NET Core)         |
-|   - Native CORS & In-Memory Thread-Safe Concurrent Store    |
+|   - Native CORS & Scoped Dependency Injection               |
++------------------------------+------------------------------+
+                               |
+                   Entity Framework Core 10
+                               |
+                               v
++-------------------------------------------------------------+
+|                 Relational Database Storage                 |
+|               Microsoft SQL Server (SQLEXPRESS)             |
+|                   Database: TaskTrackerDb                   |
+|                   Table: Tasks (Schema)                     |
 +-------------------------------------------------------------+
                                |
                   Containerization Target
@@ -64,10 +77,11 @@ This repository documents the complete end-to-end modernization lifecycle of **T
 
 ### Backend
 - **Framework**: .NET 10 (originally .NET Framework 4.7.2)
-- **Web Server**: Kestrel (originally OWIN / Microsoft.Owin.Hosting)
+- **Web Server**: Kestrel (originally OWIN Katana HttpListener)
 - **API Framework**: ASP.NET Core Controllers (`Microsoft.AspNetCore.Mvc`)
+- **Database**: Microsoft SQL Server (SQLEXPRESS)
+- **ORM**: Entity Framework Core 10 (`Microsoft.EntityFrameworkCore.SqlServer`)
 - **JSON Serialization**: System.Text.Json (camelCase formatting)
-- **Concurrency**: `System.Collections.Concurrent.ConcurrentDictionary` for thread-safe state
 
 ### Frontend
 - **Framework**: React 18
@@ -75,21 +89,41 @@ This repository documents the complete end-to-end modernization lifecycle of **T
 - **State Management**: Redux Toolkit (`@reduxjs/toolkit`, `react-redux`)
 - **Async Handling**: `createAsyncThunk` with lifecycle reducers (`pending`, `fulfilled`, `rejected`)
 - **Icons**: Lucide React
-- **Styling**: Vanilla CSS3 design system with custom properties, responsive grid, and dark slate theme
+- **Styling**: Vanilla CSS3 design system with dark-slate theme, status badges, and responsive layout
+
+### Cloud & DevOps
+- **Containerization**: Multi-stage Dockerfile (build stage: .NET 10 SDK, runtime: ASP.NET 10)
+- **Orchestration**: Red Hat OpenShift / Kubernetes manifests (Deployment, Service, Route)
 
 ---
 
-## 4. API Specification
+## 4. Database Schema (Microsoft SQL Server)
 
-All endpoints are hosted at base URL `http://localhost:5000/api/tasks`.
+The database `TaskTrackerDb` is automatically initialized on application startup using `dbContext.Database.EnsureCreated()`.
+
+### `Tasks` Table Definition
+| Column | Data Type | Nullable | Description |
+|---|---|---|---|
+| `Id` | `INT` (Identity) | No (PK) | Auto-incrementing primary key |
+| `Title` | `NVARCHAR(200)` | No | Task title |
+| `Description` | `NVARCHAR(1000)`| Yes | Detailed notes or context |
+| `Status` | `NVARCHAR(50)` | No | Status (`Pending`, `In Progress`, `Completed`) |
+| `Priority` | `NVARCHAR(20)` | No | Priority (`Low`, `Medium`, `High`) |
+| `CreatedAt` | `DATETIME2` | No | Timestamp in UTC |
+
+---
+
+## 5. API Specification
+
+Base URL: `http://localhost:5000/api/tasks`
 
 | Method | Endpoint | Description | Status Codes |
 |---|---|---|---|
-| `GET` | `/api/tasks` | Retrieves all tasks | `200 OK` |
+| `GET` | `/api/tasks` | Retrieves all tasks from SQL Server | `200 OK` |
 | `GET` | `/api/tasks/{id}` | Retrieves a single task by ID | `200 OK`, `404 Not Found` |
-| `POST` | `/api/tasks` | Creates a new task | `201 Created`, `400 Bad Request` |
-| `PUT` | `/api/tasks/{id}` | Updates an existing task | `200 OK`, `400 Bad Request`, `404 Not Found` |
-| `DELETE` | `/api/tasks/{id}` | Deletes a task by ID | `200 OK`, `404 Not Found` |
+| `POST` | `/api/tasks` | Creates a new task and commits to SQL Server | `201 Created`, `400 Bad Request` |
+| `PUT` | `/api/tasks/{id}` | Updates an existing task in SQL Server | `200 OK`, `400 Bad Request`, `404 Not Found` |
+| `DELETE` | `/api/tasks/{id}` | Deletes a task from SQL Server | `200 OK`, `404 Not Found` |
 
 ### Sample Payload (`TaskItem` Model)
 ```json
@@ -99,83 +133,88 @@ All endpoints are hosted at base URL `http://localhost:5000/api/tasks`.
   "description": "Modernize project file, Kestrel server, and ASP.NET Core controllers",
   "status": "Completed",
   "priority": "High",
-  "createdAt": "2026-10-14T15:00:00Z"
+  "createdAt": "2026-10-14T12:00:00Z"
 }
 ```
 
 ---
 
-## 5. Architectural Deep-Dive: .NET 4.7.2 vs .NET 10
+## 6. Architectural Evolution: .NET 4.7.2 vs .NET 10
 
-| Architectural Dimension | Legacy (.NET Framework 4.7.2) | Modernized (.NET 10) |
+| Dimension | Legacy (.NET Framework 4.7.2) | Modernized (.NET 10) |
 |---|---|---|
-| **OS Compatibility** | Windows-only | Cross-platform (Linux, macOS, Windows) |
+| **OS Compatibility** | Windows-only | Cross-platform (Linux, Windows, macOS) |
 | **Web Server** | OWIN / Katana / IIS | Kestrel (Built-in, high throughput) |
-| **Project File SDK** | `Microsoft.NET.Sdk` with manual assembly imports | `Microsoft.NET.Sdk.Web` (Zero external packages needed) |
+| **Data Storage** | Temporary in-memory collections | Microsoft SQL Server with EF Core 10 |
+| **Project File SDK** | `Microsoft.NET.Sdk` with manual packages | `Microsoft.NET.Sdk.Web` |
 | **Base Controller** | `ApiController` (`System.Web.Http`) | `ControllerBase` (`Microsoft.AspNetCore.Mvc`) |
-| **Model Validation** | Manual validation checks | Automatic via `[ApiController]` |
+| **Model Validation** | Manual validation logic | Automatic via `[ApiController]` |
+| **Dependency Injection** | Manual or third-party container | Built-in native constructor injection |
 | **Startup File** | Split across `Program.cs` and `Startup.cs` | Unified top-level statements in `Program.cs` |
-| **CORS Configuration** | `Microsoft.Owin.Cors` middleware | Native `builder.Services.AddCors()` |
-| **Cloud / OpenShift** | Incompatible with standard Linux containers | Native Linux container support |
+| **Cloud Readiness** | Incompatible with Linux containers | Native Linux container support for OpenShift |
 
 ---
 
-## 6. Frontend State Architecture (Redux Toolkit)
+## 7. Frontend Architecture (Redux Toolkit)
 
-The React client utilizes a predictable unidirectional data flow powered by Redux Toolkit:
+The React client communicates with the .NET 10 API using Redux Toolkit:
 
-- **Centralized Store (`src/store/index.js`)**: Holds the entire global application state (`items`, `status`, `error`, `filter`).
+- **Central Store (`src/store/index.js`)**: Holds global application state (`items`, `status`, `error`, `filter`).
 - **Async Thunks (`src/store/tasksSlice.js`)**:
-  - `fetchTasks`: Dispatches asynchronous `GET` request on initial mount.
-  - `addTask`: Dispatches `POST` request and appends newly created item to state.
-  - `updateTask`: Dispatches `PUT` request and updates the matched task in state.
-  - `deleteTask`: Dispatches `DELETE` request and filters out the deleted ID.
-- **UI Components (`src/App.jsx`)**:
-  - Metric summary cards (Total, Pending, In Progress, Completed).
-  - Real-time search filter and priority/date sorter.
-  - One-click task completion toggle.
+  - `fetchTasks`: Dispatches async `GET` request on mount.
+  - `addTask`: Dispatches `POST` request and persists to SQL Server.
+  - `updateTask`: Dispatches `PUT` request and updates the matched record in state.
+  - `deleteTask`: Dispatches `DELETE` request and removes the record from state.
+- **Dashboard Features (`src/App.jsx`)**:
+  - Live metrics banner (Total, Pending, In Progress, Completed).
+  - Real-time search by title or description keywords.
+  - Sorting dropdown (Newest First vs Highest Priority).
+  - One-click completion toggle.
   - Responsive creation form with validation.
 
 ---
 
-## 7. Local Development & Verification
+## 8. OpenShift Deployment & Containerization
+
+With .NET 10 running cross-platform, the backend is containerized for Red Hat OpenShift:
+
+1. **Multi-Stage Dockerfile (`backend/Dockerfile`)**:
+   - Stage 1: Builds and publishes the project using `mcr.microsoft.com/dotnet/sdk:10.0`.
+   - Stage 2: Copies binaries into minimal `mcr.microsoft.com/dotnet/aspnet:10.0` runtime image (under 200MB).
+2. **OpenShift Manifest (`openshift/deployment.yaml`)**:
+   - **Deployment**: Maintains 2 replicas of the backend with CPU and memory limits.
+   - **Service**: Internal cluster load balancer on port 5000 (`tasktracker-service`).
+   - **Route**: Exposes public external HTTPS address with edge TLS termination.
+
+---
+
+## 9. Local Setup & Verification
 
 ### Prerequisites
 - .NET 10 SDK (`dotnet --version`)
+- Microsoft SQL Server (`.\SQLEXPRESS` or LocalDB)
 - Node.js v18+ and npm (`npm.cmd --version`)
 
-### 1. Run the Backend API
+### 1. Run the Backend (with SQL Server)
 ```powershell
 cd backend
 dotnet run
 ```
-- Endpoint verified: `http://localhost:5000/api/tasks`
+- Automatically initializes `TaskTrackerDb` on `.\SQLEXPRESS` and seeds records.
+- Verified endpoint: `http://localhost:5000/api/tasks`
 
-### 2. Run the React Frontend
+### 2. Verify SQL Server via CLI
+```powershell
+sqlcmd -S ".\SQLEXPRESS" -E -d "TaskTrackerDb" -Q "SELECT Id, Title, Status, Priority FROM Tasks;"
+```
+
+### 3. Run the React Frontend
 ```powershell
 cd frontend
 npm.cmd install
 npm.cmd run dev
 ```
-- Dashboard URL: `http://localhost:5173/`
-
-### 3. Verification with Postman
-You can import and execute the following requests in Postman against `http://localhost:5000`:
-1. `GET /api/tasks` -> Returns HTTP 200 with list of seeded tasks.
-2. `POST /api/tasks` -> Headers: `Content-Type: application/json`, Body: `{ "title": "New Task", "priority": "High" }`. Returns HTTP 201.
-3. `PUT /api/tasks/1` -> Updates status to "Completed". Returns HTTP 200.
-4. `DELETE /api/tasks/1` -> Removes task. Returns HTTP 200.
-
----
-
-## 8. Next Phase: OpenShift & Containerization
-
-With the backend successfully upgraded to cross-platform .NET 10, the project is ready for containerization:
-1. Multi-stage Dockerfile / Containerfile build (Build image vs runtime distroless image).
-2. Kubernetes / OpenShift manifests:
-   - **Pod / Deployment**: Manages the running container replicas.
-   - **Service**: Provides internal cluster IP and port abstraction.
-   - **Route**: Exposes the service to external internet traffic via OpenShift Router.
+- Open `http://localhost:5173/` in your browser.
 
 ---
 
