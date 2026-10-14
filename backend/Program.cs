@@ -1,38 +1,35 @@
-using System;
-using System.Threading;
-using Microsoft.Owin.Hosting;
+﻿var builder = WebApplication.CreateBuilder(args);
 
-namespace TaskTrackerApi
+// 1. Add Controller support
+builder.Services.AddControllers();
+
+// 2. Configure CORS for frontend access (React running on localhost:5173)
+builder.Services.AddCors(options =>
 {
-    class Program
+    options.AddDefaultPolicy(policy =>
     {
-        private static readonly ManualResetEvent _shutdownEvent = new ManualResetEvent(false);
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 
-        static void Main(string[] args)
-        {
-            string baseAddress = "http://localhost:5000/";
+// 3. Configure Kestrel web server to listen on port 5000
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5000);
+});
 
-            Console.WriteLine("====================================================");
-            Console.WriteLine("  TaskTracker API (.NET Framework 4.7.2)");
-            Console.WriteLine("====================================================");
-            Console.WriteLine($"Starting server on: {baseAddress}");
+var app = builder.Build();
 
-            Console.CancelKeyPress += (sender, eventArgs) =>
-            {
-                eventArgs.Cancel = true;
-                _shutdownEvent.Set();
-            };
+// 4. Configure HTTP request pipeline
+app.UseCors();
+app.MapControllers();
 
-            using (WebApp.Start<Startup>(url: baseAddress))
-            {
-                Console.WriteLine($"Server is running at {baseAddress}");
-                Console.WriteLine($"Test endpoint: {baseAddress}api/tasks");
-                Console.WriteLine("Press Ctrl+C to stop the server...");
+Console.WriteLine("====================================================");
+Console.WriteLine("  TaskTracker API (.NET 10 - Modernized)");
+Console.WriteLine("====================================================");
+Console.WriteLine("Server is running on: http://localhost:5000");
+Console.WriteLine("Test endpoint: http://localhost:5000/api/tasks");
 
-                _shutdownEvent.WaitOne();
-            }
-
-            Console.WriteLine("Server stopped.");
-        }
-    }
-}
+app.Run();
