@@ -1,0 +1,60 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tasktracker-backend
+  labels:
+    app: tasktracker
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tasktracker
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: tasktracker
+        tier: backend
+    spec:
+      containers:
+      - name: tasktracker-api
+        image: image-registry.openshift-image-registry.svc:5000/tasktracker-dev/tasktracker-api:latest
+        ports:
+        - containerPort: 5000
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tasktracker-service
+  labels:
+    app: tasktracker
+spec:
+  selector:
+    app: tasktracker
+    tier: backend
+  ports:
+  - port: 5000
+    targetPort: 5000
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: tasktracker-route
+  labels:
+    app: tasktracker
+spec:
+  to:
+    kind: Service
+    name: tasktracker-service
+  port:
+    targetPort: 5000
+  tls:
+    termination: edge

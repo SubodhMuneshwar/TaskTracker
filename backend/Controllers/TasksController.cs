@@ -28,7 +28,7 @@ public class TasksController : ControllerBase
                 Description = "Build backend endpoints with Web API 2 controllers and CORS",
                 Status = "Completed",
                 Priority = "High",
-                CreatedAt = DateTime.UtcNow.AddHours(-2)
+                CreatedAt = DateTime.UtcNow.AddHours(-3)
             },
             new()
             {
@@ -37,7 +37,7 @@ public class TasksController : ControllerBase
                 Description = "Connect Redux Toolkit store, async thunks, and UI dashboard",
                 Status = "Completed",
                 Priority = "High",
-                CreatedAt = DateTime.UtcNow.AddHours(-1)
+                CreatedAt = DateTime.UtcNow.AddHours(-2)
             },
             new()
             {
@@ -46,15 +46,15 @@ public class TasksController : ControllerBase
                 Description = "Modernize project file, Kestrel server, and ASP.NET Core controllers",
                 Status = "Completed",
                 Priority = "High",
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow.AddHours(-1)
             },
             new()
             {
                 Id = _nextId++,
                 Title = "Containerize and Deploy on OpenShift",
-                Description = "Create Containerfile, understand Pods, Services, and OpenShift Routes",
-                Status = "Pending",
-                Priority = "Medium",
+                Description = "Create multi-stage Dockerfile, Pods, Services, and OpenShift Routes",
+                Status = "Completed",
+                Priority = "High",
                 CreatedAt = DateTime.UtcNow
             }
         };
